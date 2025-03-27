@@ -1,12 +1,48 @@
 {
   "name": "tau-calculator",
-  "version": "0.0.0",
+  "version": "0.0.1",
+  "main": "electron/main.js",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "electron:serve": "ng build --base-href ./ && electron .",
+    "electron:dev": "concurrently \"ng serve\" \"wait-on http://localhost:4200 && electron . --serve\"",
+    "electron:build": "ng build --base-href ./ && electron-builder"
+  },
+  "build": {
+    "appId": "com.yourcompany.taucalculator",
+    "productName": "Tau Calculator",
+    "directories": {
+      "output": "release/"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "tau-binary",
+        "to": "tau-binary"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
   },
   "private": true,
   "dependencies": {
@@ -17,7 +53,11 @@
     "@angular/platform-browser": "^19.2.0",
     "@angular/platform-browser-dynamic": "^19.2.0",
     "@angular/router": "^19.2.0",
+    "@tailwindcss/postcss": "^4.0.14",
+    "d3": "^7.9.0",
+    "postcss": "^8.5.3",
     "rxjs": "~7.8.0",
+    "tailwindcss": "^4.0.14",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"
   },
@@ -25,13 +65,18 @@
     "@angular-devkit/build-angular": "^19.2.3",
     "@angular/cli": "^19.2.3",
     "@angular/compiler-cli": "^19.2.0",
+    "@types/d3": "^7.4.3",
     "@types/jasmine": "~5.1.0",
+    "concurrently": "^9.1.2",
+    "electron": "^35.0.2",
+    "electron-builder": "^25.1.8",
     "jasmine-core": "~5.6.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "~5.7.2"
+    "typescript": "~5.7.2",
+    "wait-on": "^8.0.3"
   }
 }

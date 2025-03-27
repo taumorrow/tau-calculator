@@ -1,0 +1,276 @@
+<div class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+  <div class="calculator-container bg-slate-800 rounded-lg shadow-xl border border-slate-700 w-full max-w-6xl">
+    <!-- Calculator Tabs -->
+    <div class="calculator-tabs bg-slate-800 rounded-t-lg border-b border-slate-700 flex overflow-x-auto">
+      <button
+        [ngClass]="activeTab === 'calculator' ? 'bg-slate-900 text-cyan-400 border-t-2 border-cyan-500' : 'bg-slate-800 text-slate-400 hover:text-slate-300'"
+        (click)="setActiveTab('calculator')"
+        class="px-4 py-2 text-sm font-medium transition-colors">
+        Calculator
+      </button>
+      <button
+        [ngClass]="activeTab === 'visualization' ? 'bg-slate-900 text-cyan-400 border-t-2 border-cyan-500' : 'bg-slate-800 text-slate-400 hover:text-slate-300'"
+        (click)="setActiveTab('visualization')"
+        class="px-4 py-2 text-sm font-medium transition-colors">
+        Circuit Visualization
+      </button>
+      <button
+        [ngClass]="activeTab === 'step-execution' ? 'bg-slate-900 text-cyan-400 border-t-2 border-cyan-500' : 'bg-slate-800 text-slate-400 hover:text-slate-300'"
+        (click)="setActiveTab('step-execution')"
+        class="px-4 py-2 text-sm font-medium transition-colors">
+        Step Execution
+      </button>
+      <button
+        [ngClass]="activeTab === 'concepts' ? 'bg-slate-900 text-cyan-400 border-t-2 border-cyan-500' : 'bg-slate-800 text-slate-400 hover:text-slate-300'"
+        (click)="setActiveTab('concepts')"
+        class="px-4 py-2 text-sm font-medium transition-colors">
+        Tau Concepts
+      </button>
+    </div>
+
+    <div class="p-4">
+      <!-- Calculator Display - Always visible -->
+      <div class="w-full bg-slate-900 text-right p-4 rounded-lg border border-slate-700 mb-3">
+        <div class="flex justify-between items-center">
+          <div class="text-xs text-slate-500">
+            <div *ngIf="isProcessing" class="flex items-center">
+              <div class="h-3 w-3 animate-spin mr-1">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+              <span>Processing in Tau...</span>
+            </div>
+          </div>
+          <div class="text-xl font-mono text-cyan-400 truncate">
+            {{ isProcessing ? '...' : displayValue }}
+          </div>
+        </div>
+
+        <!-- Display operation info -->
+        <div *ngIf="operation && firstOperand !== null" class="text-right text-xs text-slate-500 mt-1">
+          {{ firstOperand }} {{ getOperatorSymbol(operation) }}
+        </div>
+
+        <!-- Binary representation -->
+        <div class="bg-slate-900/60 border border-slate-700 p-2 rounded-md mt-2 text-xs">
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500">
+              {{ calculatorType === 'INTEGER' ? 'Binary:' :
+                 (decimalMode === 'FIXED_POINT' ? 'Fixed-Point:' : 'Floating-Point:') }}
+            </span>
+            <div class="flex items-center">
+              <span class="font-mono text-cyan-400">{{ getBinaryRepresentation() }}</span>
+              <button
+                *ngIf="firstOperand !== null && operation !== null"
+                (click)="showTauHelp('binary-representation')"
+                class="ml-2 bg-slate-700 rounded-full w-5 h-5 flex items-center justify-center text-cyan-400 text-xs hover:bg-slate-600">
+                ?
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calculator Tab Content -->
+      <div [ngClass]="{'hidden': activeTab !== 'calculator'}" class="calculator-content">
+        <!-- Calculator Mode Selector -->
+        <app-calculator-mode
+          [selectedCalculatorType]="calculatorType"
+          [selectedDecimalMode]="decimalMode"
+          [decimalPlaces]="decimalPlaces"
+          (calculatorTypeChange)="onCalculatorTypeChange($event)"
+          (decimalModeChange)="onDecimalModeChange($event)"
+          (decimalPlacesChange)="onDecimalPlacesChange($event)">
+        </app-calculator-mode>
+
+        <!-- Bit Size Selection -->
+        <div class="bg-slate-900/60 border border-slate-700 p-2 rounded-md mb-2 text-xs">
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500">Bit Size:</span>
+            <div class="flex gap-1">
+              <button
+                *ngFor="let size of maxBitSizes"
+                (click)="updateBitSize(size)"
+                class="px-2 py-1 rounded text-xs"
+                [ngClass]="bitSize === size ? 'bg-cyan-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'">
+                {{ size }}
+              </button>
+            </div>
+          </div>
+          <div class="mt-1 text-right text-slate-500">
+            Max value: {{ getMaxValue() | number }}
+          </div>
+        </div>
+
+        <!-- Error message -->
+        <div *ngIf="error" class="bg-red-800/40 border border-red-700 text-red-300 p-2 rounded-md mb-2 text-sm">
+          {{ error }}
+        </div>
+
+        <!-- Calculator keypad -->
+        <div class="grid grid-cols-4 gap-2 mt-2">
+          <button (click)="clearAll()" class="bg-red-700 hover:bg-red-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">C</button>
+          <button (click)="clearEntry()" class="bg-red-700/70 hover:bg-red-600/70 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">CE</button>
+          <button (click)="deleteLastDigit()" class="bg-slate-700 hover:bg-slate-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">⌫</button>
+          <button
+            (click)="handleOperation('/')"
+            [disabled]="calculatorType === 'DECIMAL'"
+            [ngClass]="calculatorType === 'DECIMAL' ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed' : 'bg-cyan-700 hover:bg-cyan-600 text-white'"
+            class="text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">÷</button>
+
+          <button (click)="handleDigit('7')" class="bg-slate-700 hover:bg-slate-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">7</button>
+          <button (click)="handleDigit('8')" class="bg-slate-700 hover:bg-slate-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">8</button>
+          <button (click)="handleDigit('9')" class="bg-slate-700 hover:bg-slate-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">9</button>
+          <button
+            (click)="handleOperation('*')"
+            [disabled]="calculatorType === 'DECIMAL'"
+            [ngClass]="calculatorType === 'DECIMAL' ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed' : 'bg-cyan-700 hover:bg-cyan-600 text-white'"
+            class="text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">×</button>
+
+          <button (click)="handleDigit('4')" class="bg-slate-700 hover:bg-slate-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">4</button>
+          <button (click)="handleDigit('5')" class="bg-slate-700 hover:bg-slate-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">5</button>
+          <button (click)="handleDigit('6')" class="bg-slate-700 hover:bg-slate-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">6</button>
+          <button (click)="handleOperation('-')" class="bg-cyan-700 hover:bg-cyan-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">−</button>
+
+          <button (click)="handleDigit('1')" class="bg-slate-700 hover:bg-slate-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">1</button>
+          <button (click)="handleDigit('2')" class="bg-slate-700 hover:bg-slate-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">2</button>
+          <button (click)="handleDigit('3')" class="bg-slate-700 hover:bg-slate-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">3</button>
+          <button (click)="handleOperation('+')" class="bg-cyan-700 hover:bg-cyan-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">+</button>
+
+          <button (click)="handleDigit('0')" class="col-span-2 bg-slate-700 hover:bg-slate-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">0</button>
+          <button (click)="handleDecimalPoint()" class="bg-slate-700 hover:bg-slate-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">.</button>
+          <button (click)="calculateResult()" class="bg-indigo-700 hover:bg-indigo-600 text-white text-xl font-semibold rounded-md flex items-center justify-center transition-colors shadow-md h-12">=</button>
+        </div>
+
+        <!-- Calculation history -->
+        <div *ngIf="calculationHistory.length > 0" class="mt-4 border-t border-slate-700 pt-4">
+          <h2 class="text-sm font-semibold text-slate-400 mb-2">History</h2>
+          <div class="max-h-32 overflow-y-auto">
+            <div *ngFor="let item of calculationHistory" class="flex justify-between text-sm py-1 border-b border-slate-700">
+              <span class="text-slate-400">{{ item.expression }}</span>
+              <span class="text-cyan-400">{{ calculatorType === 'INTEGER' ? item.result : item.result.toFixed(decimalPlaces) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Information about Tau calculation -->
+        <div class="mt-4 text-xs text-slate-500">
+          <p *ngIf="calculatorType === 'INTEGER'">
+            All calculations are processed using Tau binary encoding with {{ bitSize }}-bit precision and executed using a local Tau engine.
+            <a (click)="setActiveTab('concepts')" class="text-cyan-400 hover:underline cursor-pointer">Learn more about Tau language</a>
+          </p>
+          <p *ngIf="calculatorType === 'DECIMAL' && decimalMode === 'FIXED_POINT'">
+            Decimal calculations use fixed-point arithmetic with {{ decimalPlaces }} decimal places, utilizing {{ bitSize }}-bit precision on the Tau engine.
+            <a (click)="showTauHelp('fixed-point')" class="text-cyan-400 hover:underline cursor-pointer">Learn about fixed-point representation</a>
+          </p>
+          <p *ngIf="calculatorType === 'DECIMAL' && decimalMode === 'FLOATING_POINT'">
+            Decimal calculations use floating-point arithmetic with {{ bitSize }}-bit precision (1 sign bit, {{ tauDecimalCalculator['exponentBits'] }} exponent bits, {{ tauDecimalCalculator['mantissaBits'] }} mantissa bits).
+            <a (click)="showTauHelp('floating-point')" class="text-cyan-400 hover:underline cursor-pointer">Learn about floating-point representation</a>
+          </p>
+        </div>
+      </div>
+
+      <!-- Circuit Visualization Tab Content -->
+      <div [ngClass]="{'hidden': activeTab !== 'visualization'}" class="visualization-content">
+        <app-tau-visualization
+          [firstOperand]="firstOperand"
+          [secondOperand]="parseFloat(displayValue)"
+          [operation]="operation"
+          [bitSize]="bitSize"
+          [calculatorType]="calculatorType"
+          [decimalMode]="decimalMode"
+          [decimalPlaces]="decimalPlaces">
+        </app-tau-visualization>
+      </div>
+
+      <!-- Step Execution Tab Content -->
+      <div [ngClass]="{'hidden': activeTab !== 'step-execution'}" class="step-execution-content">
+        <app-tau-step-execution
+          [firstOperand]="firstOperand"
+          [secondOperand]="parseFloat(displayValue)"
+          [operation]="operation"
+          [bitSize]="bitSize"
+          [calculatorType]="calculatorType"
+          [decimalMode]="decimalMode"
+          [decimalPlaces]="decimalPlaces">
+        </app-tau-step-execution>
+      </div>
+
+      <!-- Tau Concepts Tab Content -->
+      <div [ngClass]="{'hidden': activeTab !== 'concepts'}" class="concepts-content">
+        <app-tau-concept-browser
+          [contextConcept]="currentConceptContext">
+        </app-tau-concept-browser>
+      </div>
+
+      <!-- Tau Program Preview Panel -->
+      <div *ngIf="showPreview && generatedTauProgram" class="mt-4 overflow-hidden transition-all duration-300">
+        <div class="bg-slate-900 border border-slate-700 rounded-md overflow-hidden">
+          <div class="flex justify-between items-center bg-slate-800 p-2 border-b border-slate-700">
+            <span class="text-sm font-medium text-cyan-400">Generated Tau Program ({{ bitSize }}-bit)</span>
+            <span class="text-xs text-slate-400">{{ getInputFileCount() }} input files, {{ getOutputFileCount() }} output files</span>
+          </div>
+
+          <div class="p-3">
+            <!-- Program tabs -->
+            <div class="flex border-b border-slate-700 mb-2">
+              <button
+                (click)="setActiveTab(PreviewTab.TauCode)"
+                class="px-3 py-1 text-xs font-medium transition-colors"
+                [ngClass]="activePreviewTab === PreviewTab.TauCode ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-400 hover:text-slate-300'">
+                Tau Code
+              </button>
+              <button
+                (click)="setActiveTab(PreviewTab.InputFiles)"
+                class="px-3 py-1 text-xs font-medium transition-colors"
+                [ngClass]="activePreviewTab === PreviewTab.InputFiles ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-400 hover:text-slate-300'">
+                Input Files
+              </button>
+              <button
+                (click)="setActiveTab(PreviewTab.OutputFiles)"
+                class="px-3 py-1 text-xs font-medium transition-colors"
+                [ngClass]="activePreviewTab === PreviewTab.OutputFiles ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-400 hover:text-slate-300'">
+                Output Files
+              </button>
+
+              <div class="flex-grow"></div>
+
+              <!-- Show full code toggle -->
+              <button
+                (click)="toggleFullCode()"
+                class="px-3 py-1 text-xs text-slate-400 hover:text-slate-300">
+                {{ showFullCode ? 'Show Less' : 'Show Full Code' }}
+              </button>
+            </div>
+
+            <!-- Code preview -->
+            <pre class="text-xs font-mono text-slate-300 overflow-auto max-h-80 whitespace-pre">{{ getActiveTabContent() }}</pre>
+
+            <div class="mt-2 text-xs text-slate-500">
+              <p *ngIf="calculatorType === 'INTEGER'">
+                This Tau program will be executed on the Tau engine to calculate {{ firstOperand }} {{ getOperatorSymbol(operation) }} {{ displayValue }}.
+              </p>
+              <p *ngIf="calculatorType === 'DECIMAL' && decimalMode === 'FIXED_POINT'">
+                This Tau program uses fixed-point arithmetic with {{ decimalPlaces }} decimal places to calculate {{ firstOperand }} {{ getOperatorSymbol(operation) }} {{ displayValue }}.
+              </p>
+              <p *ngIf="calculatorType === 'DECIMAL' && decimalMode === 'FLOATING_POINT'">
+                This Tau program uses floating-point arithmetic to calculate {{ firstOperand }} {{ getOperatorSymbol(operation) }} {{ displayValue }}.
+              </p>
+              <p>The program uses {{ bitSize }}-bit binary encoded values and performs the operation using boolean logic.</p>
+            </div>
+
+            <div class="mt-3 flex justify-end">
+              <button
+                (click)="calculateResult()"
+                class="bg-indigo-700 hover:bg-indigo-600 text-white px-3 py-1 rounded text-sm">
+                Execute Program
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
